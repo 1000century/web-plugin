@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "ADHD Quiz Helper",
+  "version": "1.0",
+  "description": "드래그한 텍스트를 즉시 퀴즈로 변환",
+
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://aiplatform.googleapis.com/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["panel.css"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+
+  "action": {
+    "default_title": "ADHD Quiz Helper"
+  }
+}
