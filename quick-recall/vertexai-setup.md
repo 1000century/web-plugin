@@ -4,11 +4,11 @@
 
 | 항목 | 값 |
 |------|-----|
-| 프로젝트 ID | `project-0f38ae61-3455-4c1c-847` |
-| 프로젝트 번호 | `268942504949` |
-| 프로젝트 이름 | `younsere-proj` |
-| 조직 ID | `532676330251` |
-| 계정 | `younsere@gmail.com` |
+| 프로젝트 ID | `your-project-id` |
+| 프로젝트 번호 | `123456789012` |
+| 프로젝트 이름 | `your-project-name` |
+| 조직 ID | `123456789012` |
+| 계정 | `your-account@gmail.com` |
 
 ---
 
@@ -16,8 +16,8 @@
 
 | 항목 | 값 |
 |------|-----|
-| 이름 | `adhd-app` |
-| 이메일 | `adhd-app@project-0f38ae61-3455-4c1c-847.iam.gserviceaccount.com` |
+| 이름 | `your-sa-name` |
+| 이메일 | `your-sa-name@your-project-id.iam.gserviceaccount.com` |
 | 역할 | `roles/aiplatform.user`, `roles/aiplatform.expressUser` |
 
 ---
@@ -26,9 +26,9 @@
 
 | 항목 | 값 |
 |------|-----|
-| 이름 | `adhd-vertex-sa-key` |
+| 이름 | `your-api-key-name` |
 | 키 값 | ⚠️ 기밀 — GCP 콘솔 > Vertex AI > API 키에서 확인 (코드에 하드코딩 안 함, 사용자가 패널에서 직접 입력) |
-| Bound SA | `adhd-app@project-0f38ae61-3455-4c1c-847.iam.gserviceaccount.com` |
+| Bound SA | `your-sa-name@your-project-id.iam.gserviceaccount.com` |
 | 제한 | `aiplatform.googleapis.com` |
 
 ---
@@ -38,10 +38,9 @@
 키 생성이 조직 정책으로 막혀있어서 아래 3개 비활성화함.
 
 ```bash
-# 비활성화 명령어
 cat > /tmp/policy.json << 'EOF'
 {
-  "name": "organizations/532676330251/policies/iam.managed.disableServiceAccountApiKeyCreation",
+  "name": "organizations/YOUR_ORG_ID/policies/iam.managed.disableServiceAccountApiKeyCreation",
   "spec": {"rules": [{"enforce": false}]}
 }
 EOF
@@ -76,10 +75,9 @@ POST https://aiplatform.googleapis.com/v1/publishers/google/models/{MODEL}:gener
 5. 확장 패널에서 API 키 직접 입력 → `chrome.storage.local`에 저장 (코드에 하드코딩 없음)
 
 ```bash
-# SA bound API 키 생성 명령어
 gcloud services api-keys create \
-  --project=project-0f38ae61-3455-4c1c-847 \
-  --display-name="adhd-vertex-sa-key" \
-  --service-account=adhd-app@project-0f38ae61-3455-4c1c-847.iam.gserviceaccount.com \
+  --project=your-project-id \
+  --display-name="your-api-key-name" \
+  --service-account=your-sa-name@your-project-id.iam.gserviceaccount.com \
   --api-target=service=aiplatform.googleapis.com
 ```
