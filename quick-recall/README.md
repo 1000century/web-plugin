@@ -5,7 +5,7 @@
 
 | 확장 프로그램 설치 | 사용 예시 |
 |:---:|:---:|
-| ![install](./install.png) | ![demo](./demo.png) |
+| ![install](./docs/install.png) | ![demo](./docs/demo.png) |
 
 ## 주요 기능
 
@@ -18,7 +18,7 @@
 ## 기술 스택
 
 - Chrome Extension Manifest V3
-- Vertex AI Express Mode → [설정 방법](./vertexai-setup.md)
+- Vertex AI Express Mode → [설정 방법](./docs/vertexai-setup.md)
   ```js
   const MODEL = "gemini-3-flash-preview";
 
