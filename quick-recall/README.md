@@ -18,7 +18,11 @@
 ## 기술 스택
 
 - Chrome Extension Manifest V3
-- Vertex AI Express Mode
+- Vertex AI Express Mode → [설정 방법](./vertexai-setup.md)
+  ```js
+  const MODEL = "gemini-3-flash-preview";
+  const endpoint = `https://aiplatform.googleapis.com/v1/publishers/google/models/${MODEL}:generateContent?key=${adhdApiKey}`;
+  ```
 
 ## 설치
 
