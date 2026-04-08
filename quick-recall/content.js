@@ -61,6 +61,18 @@ panel.innerHTML = `
   <button id="adhd-clear-btn" style="display:none">✕ 선택 초기화</button>
   <div id="adhd-status"></div>
   <div id="adhd-quiz-area"></div>
+  <div id="adhd-text-modal">
+    <div id="adhd-text-modal-box">
+      <div id="adhd-text-modal-header">
+        <span id="adhd-text-modal-title"></span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button id="adhd-text-modal-copy">📋 복사</button>
+          <button id="adhd-text-modal-close">✕</button>
+        </div>
+      </div>
+      <div id="adhd-text-modal-body"></div>
+    </div>
+  </div>
 `;
 document.documentElement.appendChild(panel);
 
@@ -328,8 +340,10 @@ function renderSelectedBox() {
       padding: 5px 0; border-bottom: 1px solid #1e1e2e;
     `;
     const preview = document.createElement('span');
-    preview.style.cssText = 'flex:1; font-size:11px; color:#aaa; line-height:1.4; word-break:break-all;';
+    preview.style.cssText = 'flex:1; font-size:11px; color:#aaa; line-height:1.4; word-break:break-all; cursor:pointer;';
     preview.textContent = `${i + 1}. ` + text.slice(0, 60).replace(/\n/g, ' ') + (text.length > 60 ? '…' : '');
+    preview.title = '클릭해서 전체 내용 보기';
+    preview.addEventListener('click', () => openTextModal(text, i + 1));
 
     const removeBtn = document.createElement('button');
     removeBtn.textContent = '✕';
@@ -358,7 +372,7 @@ function confirmSelection() {
     return;
   }
 
-  if (text && text.length > 5) {
+  if (text && text.length > 0) {
     selectedBlocks.push(text);
     el.style.outline = '2px solid #5c35ff';
     el.style.backgroundColor = 'rgba(92,53,255,0.08)';
@@ -436,7 +450,7 @@ document.addEventListener('mouseup', (e) => {
   // 약간 딜레이 후 선택 확인 (사이트 자체 핸들러 먼저 실행되도록)
   setTimeout(() => {
     const selected = window.getSelection()?.toString().trim();
-    if (selected && selected.length > 30) {
+    if (selected && selected.length > 1) {
       // 선택 영역 근처에 플로팅 버튼 표시
       const sel = window.getSelection();
       const rect = sel.getRangeAt(0).getBoundingClientRect();
@@ -516,6 +530,30 @@ function renderQuizzes(quizzes) {
 function setStatus(msg) {
   document.getElementById('adhd-status').textContent = msg;
 }
+
+// 텍스트 전체보기 모달
+const textModal = document.getElementById('adhd-text-modal');
+
+function openTextModal(text, index) {
+  document.getElementById('adhd-text-modal-title').textContent = `선택 ${index}번 전체 내용`;
+  document.getElementById('adhd-text-modal-body').textContent = text;
+  textModal.style.display = 'flex';
+}
+
+document.getElementById('adhd-text-modal-close').addEventListener('click', () => {
+  textModal.style.display = 'none';
+});
+textModal.addEventListener('click', (e) => {
+  if (e.target === textModal) textModal.style.display = 'none';
+});
+document.getElementById('adhd-text-modal-copy').addEventListener('click', () => {
+  const text = document.getElementById('adhd-text-modal-body').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('adhd-text-modal-copy');
+    btn.textContent = '✓ 복사됨';
+    setTimeout(() => { btn.textContent = '📋 복사'; }, 1500);
+  });
+});
 
 // API 키 관리
 const apiKeySection = document.getElementById('adhd-api-key-section');
