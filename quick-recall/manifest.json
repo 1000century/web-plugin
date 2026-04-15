@@ -1,8 +1,14 @@
 {
   "manifest_version": 3,
   "name": "ADHD Quiz Helper",
-  "version": "1.0",
-  "description": "드래그한 텍스트를 즉시 퀴즈로 변환",
+  "version": "1.6",
+  "description": "드래그한 텍스트를 즉시 퀴즈로 변환. 공부하면서 읽은 내용을 클릭 한 번으로 AI 퀴즈 생성.",
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
 
   "permissions": [
     "storage"
@@ -26,6 +32,11 @@
   ],
 
   "action": {
-    "default_title": "ADHD Quiz Helper"
+    "default_title": "ADHD Quiz Helper",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   }
 }

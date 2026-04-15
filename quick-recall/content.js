@@ -29,6 +29,11 @@
   const style = document.createElement('style');
   style.textContent = '* { user-select: text !important; -webkit-user-select: text !important; }';
   document.documentElement.appendChild(style);
+
+  // 확장 UI는 선택 불가 (위 규칙보다 나중에 추가되어야 적용됨)
+  const uiStyle = document.createElement('style');
+  uiStyle.textContent = '#adhd-quiz-panel,#adhd-quiz-panel *,#adhd-toggle-btn,#adhd-float-btn,#adhd-mobile-nav,#adhd-mobile-nav *{ user-select:none!important; -webkit-user-select:none!important; }';
+  document.documentElement.appendChild(uiStyle);
 })();
 
 // 패널 HTML 주입
@@ -134,16 +139,35 @@ resizeHandle.addEventListener('mousedown', (e) => {
   document.body.style.userSelect = 'none';
   e.preventDefault();
 });
+resizeHandle.addEventListener('touchstart', (e) => {
+  const touch = e.touches[0];
+  isResizing = true;
+  startX = touch.clientX;
+  startWidth = panel.offsetWidth;
+  e.preventDefault();
+}, { passive: false });
 document.addEventListener('mousemove', (e) => {
   if (!isResizing) return;
   const newWidth = Math.min(700, Math.max(240, startWidth - (e.clientX - startX)));
   panel.style.width = newWidth + 'px';
   updateToggleBtnPosition();
 });
+document.addEventListener('touchmove', (e) => {
+  if (!isResizing) return;
+  const touch = e.touches[0];
+  const newWidth = Math.min(700, Math.max(240, startWidth - (touch.clientX - startX)));
+  panel.style.width = newWidth + 'px';
+  updateToggleBtnPosition();
+}, { passive: false });
 document.addEventListener('mouseup', () => {
   if (!isResizing) return;
   isResizing = false;
   document.body.style.userSelect = '';
+  chrome.storage.local.set({ adhdPanelWidth: panel.offsetWidth });
+});
+document.addEventListener('touchend', () => {
+  if (!isResizing) return;
+  isResizing = false;
   chrome.storage.local.set({ adhdPanelWidth: panel.offsetWidth });
 });
 
@@ -249,8 +273,7 @@ infoBar.style.cssText = `
   z-index: 2147483647; pointer-events: none;
   background: #1a1a2e; border-top: 1px solid #3a3aff;
   color: #7c7cff; font-size: 12px; font-family: monospace;
-  padding: 5px 14px; display: none;
-  display: flex; align-items: center; gap: 12px;
+  padding: 5px 14px; display: none; align-items: center; gap: 12px;
 `;
 infoBar.innerHTML = `
   <span id="adhd-info-tag" style="color:#ff7c7c"></span>
@@ -260,9 +283,27 @@ infoBar.innerHTML = `
 `;
 document.documentElement.appendChild(infoBar);
 
+// 터치 기기 여부
+const isMobile = window.matchMedia('(pointer: coarse)').matches;
+
+// 모바일 피커 네비게이션 버튼
+const mobileNav = document.createElement('div');
+mobileNav.id = 'adhd-mobile-nav';
+mobileNav.innerHTML = `
+  <button id="adhd-nav-parent">↑ 부모</button>
+  <button id="adhd-nav-prev">← 이전</button>
+  <button id="adhd-nav-next">→ 다음</button>
+  <button id="adhd-nav-child">↓ 자식</button>
+  <button id="adhd-nav-confirm">✓ 선택</button>
+  <button id="adhd-nav-cancel">✗ 종료</button>
+`;
+document.documentElement.appendChild(mobileNav);
+mobileNav.addEventListener('selectstart', e => e.preventDefault());
+mobileNav.addEventListener('mousedown', e => e.preventDefault());
+
 function setPickerTarget(el) {
   if (!el || el === document.documentElement || el === document.body) return;
-  if (panel.contains(el) || toggleBtn.contains(el)) return;
+  if (panel.contains(el) || toggleBtn.contains(el) || mobileNav.contains(el)) return;
 
   pickerTarget = el;
   const r = el.getBoundingClientRect();
@@ -278,11 +319,13 @@ function setPickerTarget(el) {
   const cls = typeof el.className === 'string'
     ? el.className.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(c => `.${c}`).join('')
     : '';
-  infoBar.style.display = 'flex';
-  document.getElementById('adhd-info-tag').textContent  = `<${tag}>`;
-  document.getElementById('adhd-info-cls').textContent  = id + cls;
-  document.getElementById('adhd-info-size').textContent =
-    `${Math.round(r.width)} × ${Math.round(r.height)}`;
+  if (!isMobile) {
+    infoBar.style.display = 'flex';
+    document.getElementById('adhd-info-tag').textContent  = `<${tag}>`;
+    document.getElementById('adhd-info-cls').textContent  = id + cls;
+    document.getElementById('adhd-info-size').textContent =
+      `${Math.round(r.width)} × ${Math.round(r.height)}`;
+  }
 }
 
 function startPicker() {
@@ -298,6 +341,7 @@ function stopPicker() {
   document.body.style.cursor = '';
   hoverBox.style.display = 'none';
   infoBar.style.display = 'none';
+  mobileNav.style.display = 'none';
   document.getElementById('adhd-pick-btn').textContent = '🎯 영역 선택';
   document.getElementById('adhd-pick-btn').style.background = '';
 }
@@ -361,6 +405,7 @@ function renderSelectedBox() {
 
 function confirmSelection() {
   if (!pickerTarget) return;
+  if (mobileNav.contains(pickerTarget)) return; // 안전장치: nav 버튼이 target이면 무시
   const el = pickerTarget;
   const text = extractText(el);
   const existingIdx = selectedBlocks.indexOf(text);
@@ -379,14 +424,48 @@ function confirmSelection() {
     selectedEls.push(el);
     currentText = selectedBlocks.join('\n\n---\n\n');
     renderSelectedBox();
-    setStatus(`${selectedBlocks.length}개 선택됨 — 계속 클릭하거나 ESC로 종료`);
-    panel.classList.add('open');
-    updateToggleBtnPosition();
+    setStatus(`${selectedBlocks.length}개 선택됨 — ${isMobile ? '탭으로 계속 선택' : '계속 클릭하거나 ESC로 종료'}`);
+    if (isMobile) mobileNav.style.display = 'none';
+    else { panel.classList.add('open'); updateToggleBtnPosition(); }
   }
 }
 
 document.getElementById('adhd-pick-btn').addEventListener('click', () => {
   isPicking ? stopPicker() : startPicker();
+});
+
+// 모바일 네비게이션 버튼
+document.getElementById('adhd-nav-parent').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!pickerTarget) return;
+  const parent = pickerTarget.parentElement;
+  if (parent && parent !== document.body && parent !== document.documentElement) setPickerTarget(parent);
+});
+document.getElementById('adhd-nav-child').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!pickerTarget) return;
+  const child = [...pickerTarget.children].find(c => c.offsetWidth > 0);
+  if (child) setPickerTarget(child);
+});
+document.getElementById('adhd-nav-prev').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!pickerTarget) return;
+  const prev = pickerTarget.previousElementSibling;
+  if (prev) setPickerTarget(prev);
+});
+document.getElementById('adhd-nav-next').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!pickerTarget) return;
+  const next = pickerTarget.nextElementSibling;
+  if (next) setPickerTarget(next);
+});
+document.getElementById('adhd-nav-confirm').addEventListener('click', (e) => {
+  e.stopPropagation();
+  confirmSelection();
+});
+document.getElementById('adhd-nav-cancel').addEventListener('click', (e) => {
+  e.stopPropagation();
+  stopPicker();
 });
 
 // 키보드 네비게이션
@@ -426,32 +505,66 @@ document.addEventListener('keydown', (e) => {
 // 마우스 이동 → e.target 그대로 하이라이트 (elementFromPoint 동작과 동일)
 document.addEventListener('mousemove', (e) => {
   if (!isPicking) return;
-  if (panel.contains(e.target) || toggleBtn.contains(e.target)) return;
+  if (panel.contains(e.target) || toggleBtn.contains(e.target) || mobileNav.contains(e.target)) return;
   setPickerTarget(e.target);
 }, true);
+
+// 터치 이동 → 데스크탑 터치 전용 (모바일은 탭 방식 사용)
+document.addEventListener('touchmove', (e) => {
+  if (!isPicking || isMobile) return;
+  const touch = e.touches[0];
+  const target = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (!target || panel.contains(target) || toggleBtn.contains(target)) return;
+  setPickerTarget(target);
+  e.preventDefault();
+}, { passive: false, capture: true });
 
 // 클릭 → 선택 확정
 document.addEventListener('click', (e) => {
   if (!isPicking) return;
-  if (panel.contains(e.target) || toggleBtn.contains(e.target)) return;
+  if (panel.contains(e.target) || toggleBtn.contains(e.target) || mobileNav.contains(e.target)) return;
   e.preventDefault();
   e.stopImmediatePropagation();
   confirmSelection();
 }, true);
+
+// 터치 시작 좌표 기록 (스크롤 vs 탭 구분용)
+let touchStartX = 0, touchStartY = 0;
+document.addEventListener('touchstart', (e) => {
+  if (!isPicking) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true, capture: true });
+
+// 터치탭 → 모바일: 미리보기 + 네비 버튼 표시 / 데스크탑: 바로 선택 확정
+document.addEventListener('touchend', (e) => {
+  if (!isPicking) return;
+  if (isResizing) return;
+  if (panel.contains(e.target) || toggleBtn.contains(e.target)) return;
+  if (mobileNav.contains(e.target)) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  if (isMobile) {
+    const touch = e.changedTouches[0];
+    // 10px 이상 이동했으면 스크롤로 판단 → 무시
+    const dx = Math.abs(touch.clientX - touchStartX);
+    const dy = Math.abs(touch.clientY - touchStartY);
+    if (dx > 10 || dy > 10) return;
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (target && !panel.contains(target) && !toggleBtn.contains(target) && !mobileNav.contains(target)) {
+      setPickerTarget(target);
+      mobileNav.style.display = 'flex';
+    }
+  } else {
+    confirmSelection();
+  }
+}, { capture: true });
 // ─────────────────────────────────────────────────────
 
-document.addEventListener('mouseup', (e) => {
-  if (isPicking) return; // 피커 모드일 때는 텍스트 선택 비활성화
-  if (panel.contains(e.target) || toggleBtn.contains(e.target) || floatBtn.contains(e.target)) return;
-
-  // 플로팅 버튼 숨기기 (새 선택 시작)
-  floatBtn.style.display = 'none';
-
-  // 약간 딜레이 후 선택 확인 (사이트 자체 핸들러 먼저 실행되도록)
+function showFloatBtnForSelection() {
   setTimeout(() => {
     const selected = window.getSelection()?.toString().trim();
     if (selected && selected.length > 1) {
-      // 선택 영역 근처에 플로팅 버튼 표시
       const sel = window.getSelection();
       const rect = sel.getRangeAt(0).getBoundingClientRect();
       floatBtn.style.left = Math.min(rect.left + rect.width / 2 - 30, window.innerWidth - 100) + 'px';
@@ -461,12 +574,31 @@ document.addEventListener('mouseup', (e) => {
       floatBtn._pendingText = selected;
     }
   }, 100);
+}
+
+document.addEventListener('mouseup', (e) => {
+  if (isPicking) return;
+  if (panel.contains(e.target) || toggleBtn.contains(e.target) || floatBtn.contains(e.target)) return;
+  floatBtn.style.display = 'none';
+  showFloatBtnForSelection();
+});
+
+// 터치로 텍스트 선택 후 플로팅 버튼 표시
+document.addEventListener('touchend', (e) => {
+  if (isPicking) return;
+  if (isResizing) return;
+  if (panel.contains(e.target) || toggleBtn.contains(e.target) || floatBtn.contains(e.target)) return;
+  floatBtn.style.display = 'none';
+  showFloatBtnForSelection();
 });
 
 // 플로팅 버튼 클릭 시 퀴즈 패널로 전달
 floatBtn.addEventListener('mousedown', (e) => {
   e.preventDefault(); // 선택 해제 방지
 });
+floatBtn.addEventListener('touchstart', (e) => {
+  e.preventDefault(); // 터치 시 선택 해제 방지
+}, { passive: false });
 floatBtn.addEventListener('click', () => {
   const text = floatBtn._pendingText;
   floatBtn.style.display = 'none';
@@ -480,10 +612,13 @@ floatBtn.addEventListener('click', () => {
   updateToggleBtnPosition();
 });
 
-// 다른 곳 클릭 시 버튼 숨김
+// 다른 곳 클릭/터치 시 버튼 숨김
 document.addEventListener('mousedown', (e) => {
   if (!floatBtn.contains(e.target)) floatBtn.style.display = 'none';
 });
+document.addEventListener('touchstart', (e) => {
+  if (!floatBtn.contains(e.target)) floatBtn.style.display = 'none';
+}, { passive: true });
 
 // 퀴즈 생성
 document.getElementById('adhd-generate-btn').addEventListener('click', async () => {

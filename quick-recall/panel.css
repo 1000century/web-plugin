@@ -317,6 +317,82 @@
   transition: right 0.2s ease;
 }
 
+/* 확장 UI 요소는 텍스트 선택 안 되게 */
+#adhd-quiz-panel,
+#adhd-toggle-btn,
+#adhd-float-btn,
+#adhd-mobile-nav,
+#adhd-mobile-nav *,
+#adhd-info-bar {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* 모바일 피커 네비게이션 */
+#adhd-mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  background: #1a1a2e;
+  border: 1px solid #3a3aff;
+  border-radius: 14px;
+  padding: 8px 10px;
+  gap: 6px;
+  align-items: center;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+  white-space: nowrap;
+}
+#adhd-mobile-nav button {
+  background: #252545;
+  border: 1px solid #3a3a60;
+  border-radius: 8px;
+  color: #ccc;
+  font-size: 13px;
+  padding: 8px 12px;
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+}
+#adhd-mobile-nav button:active { background: #3a3a70; }
+#adhd-nav-confirm {
+  background: #5c35ff !important;
+  border-color: #5c35ff !important;
+  color: white !important;
+  font-weight: 700;
+}
+#adhd-nav-cancel {
+  color: #ff6b6b !important;
+}
+
+/* 모바일 대응 */
+@media (max-width: 480px) {
+  #adhd-quiz-panel {
+    width: 100vw !important;
+    max-width: 100vw;
+  }
+  #adhd-resize-handle {
+    display: none;
+  }
+  #adhd-toggle-btn {
+    font-size: 14px;
+    padding: 8px 5px;
+  }
+  #adhd-action-row {
+    gap: 4px;
+  }
+  #adhd-pick-btn,
+  #adhd-generate-btn {
+    padding: 10px 6px;
+    font-size: 13px;
+  }
+  .adhd-quiz-card {
+    padding: 10px;
+  }
+}
+
 /* API 키 섹션 */
 #adhd-api-key-section {
   padding: 8px 12px;
